@@ -10,13 +10,13 @@ module.exports = function(controller) {
       bot.startConversation(message, function(err, convo) {
 
         convo.say({
-          text: 'Hello human! I am brand new Botkit bot, ready to be customized to your needs!',
-          quick_replies: [
-            {
-              title: 'Help',
-              payload: 'help',
-            },
-          ]
+          text: 'Hallo, met deze bot kan je recepten opvragen.',
+          // quick_replies: [
+          //   {
+          //     title: 'Help',
+          //     payload: 'help',
+          //   },
+          // ]
         });
 
 

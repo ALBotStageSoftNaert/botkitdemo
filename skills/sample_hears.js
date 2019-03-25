@@ -1,6 +1,13 @@
 module.exports = function(controller) {
 
 
+
+  
+controller.hears('Put_Language','direct_message',wit.hears,function(bot, message) {
+
+    bot.reply(message,'bericht uit wit :)')
+});
+
   controller.hears('test','message_received', function(bot, message) {
 
     bot.reply(message,'I heard a test');

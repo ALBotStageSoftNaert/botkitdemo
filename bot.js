@@ -21,7 +21,10 @@ env(__dirname + '/.env');
 
 var Botkit = require('botkit');
 var debug = require('debug')('botkit:main');
-
+// Set up connection to wit
+var wit = require('botkit-middleware-witai')({
+  token: "WJIHNVL4HXXGQXL2CNJ73MGUXS5JD3K7"
+});
 var bot_options = {
     replyWithTyping: true,
 };
@@ -41,12 +44,15 @@ var controller = Botkit.socketbot(bot_options);
 
 // Set up an Express-powered webserver to expose oauth and webhook endpoints
 var webserver = require(__dirname + '/components/express_webserver.js')(controller);
-
+// Initialise the middleware for wit
+controller.middleware.receive.use(wit.receive);
 // Load in some helpers that make running Botkit on Glitch.com better
 require(__dirname + '/components/plugin_glitch.js')(controller);
 
 // Load in a plugin that defines the bot's identity
 require(__dirname + '/components/plugin_identity.js')(controller);
+
+
 
 // Open the web socket server
 controller.openSocketServer(controller.httpserver);
@@ -58,6 +64,8 @@ var normalizedPath = require("path").join(__dirname, "skills");
 require("fs").readdirSync(normalizedPath).forEach(function(file) {
   require("./skills/" + file)(controller);
 });
+
+
 
 console.log('I AM ONLINE! COME TALK TO ME: http://localhost:' + (process.env.PORT || 3000))
 
