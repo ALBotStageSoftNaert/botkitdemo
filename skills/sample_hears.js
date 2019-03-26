@@ -1,12 +1,14 @@
 module.exports = function(controller) {
-
-
-
+// // Set up connection to wit
+//   var wit = require('botkit-middleware-witai')({
+//     token: "WJIHNVL4HXXGQXL2CNJ73MGUXS5JD3K7"
+//   });
+// // Initialise the middleware for wit
+// controller.middleware.receive.use(wit.receive);
   
-controller.hears('Put_Language','direct_message',wit.hears,function(bot, message) {
-
-    bot.reply(message,'bericht uit wit :)')
-});
+// controller.hears(['Put_Language'], 'direct_message,direct_mention,mention', wit.hears, function(bot, message) {
+//   bot.reply(message, 'Hello from wit!');
+// });
 
   controller.hears('test','message_received', function(bot, message) {
 

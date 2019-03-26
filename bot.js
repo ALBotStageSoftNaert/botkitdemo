@@ -17,14 +17,17 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 var env = require('node-env-file');
 env(__dirname + '/.env');
-
+if (!process.env.wit) {
+  console.log('Error: Specify wit in environment');
+  process.exit(1);
+}
 
 var Botkit = require('botkit');
+// var wit = require('botkit-middleware-witai')({
+//   token: process.env.wit,
+// });
 var debug = require('debug')('botkit:main');
-// Set up connection to wit
-var wit = require('botkit-middleware-witai')({
-  token: "WJIHNVL4HXXGQXL2CNJ73MGUXS5JD3K7"
-});
+
 var bot_options = {
     replyWithTyping: true,
 };
@@ -44,8 +47,7 @@ var controller = Botkit.socketbot(bot_options);
 
 // Set up an Express-powered webserver to expose oauth and webhook endpoints
 var webserver = require(__dirname + '/components/express_webserver.js')(controller);
-// Initialise the middleware for wit
-controller.middleware.receive.use(wit.receive);
+
 // Load in some helpers that make running Botkit on Glitch.com better
 require(__dirname + '/components/plugin_glitch.js')(controller);
 
@@ -59,6 +61,8 @@ controller.openSocketServer(controller.httpserver);
 
 // Start the bot brain in motion!!
 controller.startTicking();
+
+// controller.middleware.receive.use(wit.receive);
 
 var normalizedPath = require("path").join(__dirname, "skills");
 require("fs").readdirSync(normalizedPath).forEach(function(file) {
