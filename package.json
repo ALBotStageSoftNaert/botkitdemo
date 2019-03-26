@@ -7,6 +7,7 @@
     "start": "node bot.js"
   },
   "dependencies": {
+    "axios": "^0.18.0",
     "body-parser": "^1.18.3",
     "botkit": "^0.7.4",
     "botkit-storage-mongo": "^1.0.6",
