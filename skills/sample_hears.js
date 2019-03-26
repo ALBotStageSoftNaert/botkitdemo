@@ -1,20 +1,31 @@
 module.exports = function(controller) {
-// // Set up connection to wit
-//   var wit = require('botkit-middleware-witai')({
-//     token: "WJIHNVL4HXXGQXL2CNJ73MGUXS5JD3K7"
-//   });
-// // Initialise the middleware for wit
-// controller.middleware.receive.use(wit.receive);
-  
-// controller.hears(['Put_Language'], 'direct_message,direct_mention,mention', wit.hears, function(bot, message) {
-//   bot.reply(message, 'Hello from wit!');
-// });
+let botLanguages=["engels","frans","duits"]
+controller.hears(['Put_Language'],'message_received', function(bot, message) {
+
+  let {persoon,Language,Option}= message.entities;
+  bot.reply(message, persoon[0].value + " spreekt dus "+ Language[0].value);
+});
+controller.hears(['Get_Language'],'message_received', function(bot, message) {
+  let {persoon,Language,Option}= message.entities;
+  if(persoon[0].value=="ik"){
+    if(botLanguages.includes(Language[0].value)){
+      bot.reply(message,"Ja, ik spreek "+ Language[0].value);
+    }
+    else{
+      bot.reply(message,"Sorry, ik spreek geen "+ Language[0].value);
+    }
+  }
+  else{
+    bot.reply(message,"Ik heb geen idee of "+ persoon[0].value +" "+ Language[0].value +" spreekt.");
+  }
+});
 
   controller.hears('test','message_received', function(bot, message) {
 
     bot.reply(message,'I heard a test');
 
   });
+  
 
   controller.hears('typing','message_received', function(bot, message) {
 

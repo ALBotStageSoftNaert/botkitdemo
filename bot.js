@@ -23,9 +23,9 @@ if (!process.env.wit) {
 }
 
 var Botkit = require('botkit');
-// var wit = require('botkit-middleware-witai')({
-//   token: process.env.wit,
-// });
+var wit = require('botkit-middleware-witai')({  
+  token: process.env.wit
+});
 var debug = require('debug')('botkit:main');
 
 var bot_options = {
@@ -59,15 +59,48 @@ require(__dirname + '/components/plugin_identity.js')(controller);
 // Open the web socket server
 controller.openSocketServer(controller.httpserver);
 
+controller.middleware.receive.use(wit.receive);
+controller.changeEars(wit.hears);
+
 // Start the bot brain in motion!!
 controller.startTicking();
-
-// controller.middleware.receive.use(wit.receive);
-
 var normalizedPath = require("path").join(__dirname, "skills");
 require("fs").readdirSync(normalizedPath).forEach(function(file) {
   require("./skills/" + file)(controller);
 });
+
+
+controller.middleware.heard.use(function(bot, message, next) {
+    var entities=message.entities;
+
+    if(entities.persoon){
+      switch(entities.persoon[0].value){
+        case "ik":
+          entities.persoon[0].value="jij";
+          break;
+        case "jij":
+          entities.persoon[0].value="ik";
+          break;
+        case "wij":
+          entities.persoon[0].value="jullie";
+          break;
+        case "hij":
+          entities.persoon[0].value="hij";
+          break;
+        default:        
+          break;
+      }
+    }
+    else{
+      entities.persoon=[{value:"jij"}]
+    }
+
+
+      next();
+
+  });
+
+
 
 
 
