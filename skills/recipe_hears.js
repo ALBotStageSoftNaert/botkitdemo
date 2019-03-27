@@ -15,8 +15,10 @@ module.exports = function(controller) {
     
        getRecipe(food).then(response => {
         if (response.data.hits) {
-        bot.reply(message, "ik heb "+ Object.entries(response.data.hits).length +" gerechten gevonden!");
-            let {recipe}=response.data.hits;
+            bot.reply(message, "ik heb "+ Object.entries(response.data.hits).length +" gerechten gevonden!");
+            
+            let recipe=response.data.hits.map(item=>item.recipe);
+            displayRecipe(bot,message,recipe[0]);
        }})
        .catch(error => {
         bot.reply(message,"Ik probeerde een gerecht met "+ food +" voor je te zoeken, maar er liep iets mis, sorry.");
@@ -26,7 +28,8 @@ module.exports = function(controller) {
       
     });
 
-    const displayRecipe= (recipe)=>{
+    const displayRecipe= (bot,message,recipe)=>{
+        bot.reply(message,recipe.label)
 
     }
     const getRecipe = async(food) => {

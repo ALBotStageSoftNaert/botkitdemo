@@ -59,6 +59,8 @@ require(__dirname + '/components/plugin_identity.js')(controller);
 // Open the web socket server
 controller.openSocketServer(controller.httpserver);
 
+
+//implement wit integration
 controller.middleware.receive.use(wit.receive);
 controller.changeEars(wit.hears);
 
