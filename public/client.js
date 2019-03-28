@@ -408,7 +408,15 @@
 
                 var li = document.createElement('li');
                 var el = document.createElement('a');
-                el.innerHTML = reply.title;
+                if(reply.image){
+                  let img= document.createElement('img');
+                  img.src=reply.image;                
+                  el.appendChild(img);
+                }
+                else{
+                  el.innerHTML = reply.title;
+                }
+                
                 el.href = '#';
 
                 el.onclick = function() {

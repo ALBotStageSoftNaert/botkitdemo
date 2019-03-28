@@ -59,6 +59,9 @@ require(__dirname + '/components/plugin_identity.js')(controller);
 // Open the web socket server
 controller.openSocketServer(controller.httpserver);
 
+//implement context handling
+var contextmiddleware=require(__dirname+'/middleware/botkit-context-middleware.js')();
+controller.middleware.capture.use(contextmiddleware.capture)
 
 //implement wit integration
 controller.middleware.receive.use(wit.receive);
