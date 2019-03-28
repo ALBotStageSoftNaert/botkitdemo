@@ -165,7 +165,7 @@ module.exports = function (controller) {
   }
   const getRecipe = async (food) => {
     try {
-      var response = await axios.get('https://api.edamam.com/search?q=' + food + '&app_id=b19ff0b4&app_key=15826dad37bea8f810e53fbdf467c4fa');
+      var response = await axios.get('https://api.edamam.com/search?q=' + food + '&app_id=b19ff0b4&app_key=15826dad37bea8f810e53fbdf467c4fa&from=0&to=3');
       return response;
     } catch (error) {
       console.error(error);
