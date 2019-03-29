@@ -17,15 +17,16 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 var env = require('node-env-file');
 env(__dirname + '/.env');
-if (!process.env.wit) {
-  console.log('Error: Specify wit in environment');
-  process.exit(1);
-}
+
 
 var Botkit = require('botkit');
-var wit = require('botkit-middleware-witai')({  
-  token: process.env.wit
-});
+
+
+
+var rasa = require('botkit-rasa')
+({rasa_uri: process.env.rasa_uri,
+model:process.env.rasa_model,
+project:process.env.rasa_project});
 var debug = require('debug')('botkit:main');
 
 var bot_options = {
@@ -63,9 +64,9 @@ controller.openSocketServer(controller.httpserver);
 var contextmiddleware=require(__dirname+'/middleware/botkit-context-middleware.js')();
 controller.middleware.capture.use(contextmiddleware.capture)
 
-//implement wit integration
-controller.middleware.receive.use(wit.receive);
-controller.changeEars(wit.hears);
+controller.middleware.receive.use(rasa.receive);
+controller.changeEars(rasa.hears);
+
 
 // Start the bot brain in motion!!
 controller.startTicking();
@@ -76,31 +77,30 @@ require("fs").readdirSync(normalizedPath).forEach(function(file) {
 
 
 controller.middleware.heard.use(function(bot, message, next) {
-    var entities=message.entities;
-
-    if(entities.persoon){
-      switch(entities.persoon[0].value){
+  var rasa = require('botkit-rasa')
+  rasa.config.project="test";
+    if(message.entities){
+      let persoon=message.entities.find(o=>o.entity==="persoon")
+      switch(persoon.value){
         case "ik":
-          entities.persoon[0].value="jij";
+          persoon.value="jij";
           break;
         case "jij":
-          entities.persoon[0].value="ik";
+          persoon.value="ik";
           break;
         case "wij":
-          entities.persoon[0].value="jullie";
+          persoon.value="jullie";
           break;
         case "hij":
-          entities.persoon[0].value="hij";
+          persoon.value="hij";
           break;
         default:        
           break;
       }
     }
     else{
-      entities.persoon=[{value:"jij"}]
+      persoon.value="jij";
     }
-
-
       next();
 
   });
