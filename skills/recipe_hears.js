@@ -29,9 +29,10 @@ module.exports = function (controller) {
 
 
     bot.createConversation(message, function (err, convo) {
-      let { persoon, food_type } = message.entities;
+      let persoon=message.entities.find(m=>m.entity==='persoon');
+      let food_type=message.entities.find(m=>m.entity==='food_type');
       let food;
-      convo.setVar("persoon", persoon);
+      convo.setVar("persoon", persoon.value);
       convo.setVar("food_type", food_type);
       convo.setVar("food", food);
 
@@ -55,34 +56,47 @@ module.exports = function (controller) {
         action: 'default',
       }, 'bad_response');
 
+
+      //Recept opgevraagd en klaar om te tonen
+      convo.addMessage("Goeie keuze, dit heb je nodig om {{vars.foodname}} te maken.","got_recipe");            
+      convo.addMessage("<ul>{{#vars.ingredients}}<li>{{value}}</li>{{/vars.ingredients}}</ul>","got_recipe");
+
+
+
+
       // Create a yes/no question in the default thread...
-      convo.addQuestion("Do you like cheese?", [
+      convo.addQuestion("Wil je nog een {{vars.food}} zoeken?", [
+        {
+          pattern: 'STOP',
+          callback: function (response, convo) {
+            convo.stop();            
+          },
+        },
         {
           pattern: 'YES',
           callback: function (response, convo) {
-            convo.gotoThread('yes_thread');
+            convo.transitionTo('gerecht','Oké top!, laten we nog een gerecht met {{vars.food}} zoeken!');
           },
         },
         {
           pattern: 'NO',
           callback: function (response, convo) {
-            convo.gotoThread('no_thread');
+            convo.succesful(); 
           },
         },
         {
           default: true,
           callback: function (response, convo) {
-            convo.gotoThread('bad_response');
+            convo.say("Super, tot later.");
+            convo.next();
           },
         }
-      ], {}, 'cheese');
+      ], {}, 'got_recipe');
 
-
-
-      //convo.addMessage("test", "gerecht");
       //default
       if (food_type) {
-        food = food_type[0].value;
+        food = food_type.value;
+        convo.setVar("food", food);
         //bot.reply(message,"MMM, "+food+" is lekker! Ken je dit gerecht al?")
         convo.addMessage({ text: "MMM, " + food + " is lekker! Ken je dit gerecht al?", action: "gerecht" });
 
@@ -90,13 +104,14 @@ module.exports = function (controller) {
       else {
         //bot.reply(message,"Ik ken veel gerechten, ik persoonlijk vind kip lekker, dit is een gerecht met kip.");
         food = "chicken";
-        convo.addMessage("Ik ken veel gerechten, ik persoonlijk vind kip lekker, dit is een gerecht met kip.");
+        convo.setVar("food", food);
+        convo.addMessage({text:"Ik ken veel gerechten, ik persoonlijk vind kip lekker, dit is een gerecht met kip.",action: "gerecht"});
       }
 
       //gerecht
 
       getRecipe(food).then(response => {
-        if (response.data.hits) {
+        if (response.data && response.data.hits) {
           // bot.reply(message, "ik heb "+ Object.entries(response.data.hits).length +" gerechten gevonden!");
           convo.addMessage({ text: "ik heb " + Object.entries(response.data.hits).length + " gerechten gevonden!" }, "gerecht");
           let recipe = response.data.hits.map(item => item.recipe);
@@ -107,22 +122,21 @@ module.exports = function (controller) {
         }
       })
         .catch(error => {
-          convo.addMessage({ text: "Ik probeerde een gerecht met " + food + " voor je te zoeken, maar er liep iets mis, sorry.", action: "cheese" }, "gerecht");
+          convo.addMessage({ text: "Ik probeerde een gerecht met " + food + " voor je te zoeken, maar er liep iets mis, sorry." }, "gerecht");
           //convo.gotoThread("cheese");
           convo.activate();
           console.error(error);
         });
+        convo.on('end',function(convo) {
 
-
-      // convo.activate();
-
-
+          if (convo.status=='completed'||convo.status=='stopped') {
+            
+        
+          } 
+        
+        });
     });
 
-
-
-
-    //con.activate();
 
   });
 
@@ -130,11 +144,7 @@ module.exports = function (controller) {
 
 
   const displayRecipe = (convo, recipe) => {
-    // var reply = {
-    //   text: recipe.label,
-    // }
-    var options = [];
-    
+    var options = [];    
     for(var i=0;i<recipe.length;i++){
       var obj={};
       if (recipe[i].label) {
@@ -146,26 +156,42 @@ module.exports = function (controller) {
       options.push(obj)
     }
     }
-
-
-    //bot.reply(message,reply)
-    //convo.addMessage(reply, "gerecht");
-    convo.addMessage({
-      // text:"t",
-      // files: [
-      //   {
-      //     url: recipe.image,
-      //     image: true
-      //   }
-      // ],
+    convo.addQuestion({
       text: "Welk recept wil je zien? :)",
       quick_replies: options
-    }, "gerecht");
+    }, [
+      {
+        pattern: 'YES',
+        callback: function (response, convo) {
+          convo.gotoThread('yes_thread');
+        },
+      },
+      {
+        pattern: 'NO',
+        callback: function (response, convo) {
+          convo.gotoThread('no_thread');
+        },
+      },
+      {
+        default: true,
+        callback: function (response, convo) { 
+          let test=convo.extractResponse('test');
+          if(recipe.map(m=>m.label).includes(test)){
+            let recept=recipe.find(m=>m.label===test);
+            convo.setVar("ingredients",recept.ingredientLines.map(m=>{return {value:m};}));
+            convo.setVar("foodname",recept.label);
+            convo.gotoThread('got_recipe');
+          }else{ 
+          convo.gotoThread('bad_response');
+        }
+      },
+      }
+    ], {key:"test"},"gerecht");
 
   }
   const getRecipe = async (food) => {
     try {
-      var response = await axios.get('https://api.edamam.com/search?q=' + food + '&app_id=b19ff0b4&app_key=15826dad37bea8f810e53fbdf467c4fa');
+      var response = await axios.get('https://api.edamam.com/search?q=' + food + '&app_id=b19ff0b4&app_key=15826dad37bea8f810e53fbdf467c4fa&from=0&to=3');
       return response;
     } catch (error) {
       console.error(error);

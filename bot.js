@@ -77,8 +77,6 @@ require("fs").readdirSync(normalizedPath).forEach(function(file) {
 
 
 controller.middleware.heard.use(function(bot, message, next) {
-  var rasa = require('botkit-rasa')
-  rasa.config.project="test";
     if(message.entities){
       let persoon=message.entities.find(o=>o.entity==="persoon")
       switch(persoon.value){
