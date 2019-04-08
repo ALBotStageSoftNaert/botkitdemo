@@ -1,0 +1,10 @@
+.env
+.data
+node_modules
+components/routes/_*
+.sass-cache/
+.DS_Store
+botkitdemo.code-workspace
+botkitdemo.code-workspace
+botkitdemo.code-workspace
+botkitdemo.code-workspace
