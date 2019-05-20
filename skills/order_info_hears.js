@@ -28,7 +28,7 @@ module.exports = function (controller) {
           callback: function (response, convo) {
             convo.setVar("order", response.text);
             convo.addMessage("Dankje {{vars.name}}","authentication");
-            //convo.next();
+            convo.next();
           },
         }
       ], {}, 'authentication');
