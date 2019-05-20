@@ -79,6 +79,7 @@ require("fs").readdirSync(normalizedPath).forEach(function(file) {
 controller.middleware.heard.use(function(bot, message, next) {
     if(message.entities){
       let persoon=message.entities.find(o=>o.entity==="persoon")
+      if(persoon){
       switch(persoon.value){
         case "ik":
           persoon.value="jij";
@@ -95,6 +96,7 @@ controller.middleware.heard.use(function(bot, message, next) {
         default:        
           break;
       }
+    }
     }
     else{
       persoon.value="jij";
