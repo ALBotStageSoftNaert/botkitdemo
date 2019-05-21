@@ -81,7 +81,7 @@ module.exports = function (controller) {
         {
           pattern: 'NO',
           callback: function (response, convo) {
-            convo.succesful(); 
+            convo.successful(); 
           },
         },
         {
