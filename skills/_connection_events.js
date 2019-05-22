@@ -10,7 +10,7 @@ module.exports = function(controller) {
       bot.startConversation(message, function(err, convo) {
 
         convo.say({
-          text: 'Hallo, ik help je graag met al je vragen over deze winkel!',
+          text: 'Hallo, ik help je graag met al je vragen over deze winkel!'
           // quick_replies: [
           //   {
           //     title: 'Help',
