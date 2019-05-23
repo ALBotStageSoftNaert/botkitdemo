@@ -13,6 +13,8 @@
       },
       reconnect_count: 0,
       guid: null,
+      shop_token:'SN-Test-98510',
+      language:null,
       current_user: null,
       on: function(event, handler) {
         this.message_window.addEventListener(event, function(evt) {
@@ -72,6 +74,8 @@
           type: 'message',
           text: text,
           user: this.guid,
+          shop_token:this.shop_token,
+          language:this.language,
           channel: this.options.use_sockets ? 'socket' : 'webhook'
         });
 
@@ -179,6 +183,8 @@
           that.deliverMessage({
             type: connectEvent,
             user: that.guid,
+            shop_token:that.shop_token,
+            language:that.language,
             channel: 'socket',
             user_profile: that.current_user ? that.current_user : null,
           });
@@ -230,7 +236,11 @@
           that.message_list.appendChild(that.next_line);
         }
         if (message.text) {
+          message.text=message.text.replace(/\\n/gi, "<br />");
           message.html = converter.makeHtml(message.text);
+        }
+        if(message.image){
+          message.html+='<img src="'+message.image+'"/>';
         }
 
         that.next_line.innerHTML = that.message_template({
@@ -244,6 +254,8 @@
         this.deliverMessage({
           type: 'trigger',
           user: this.guid,
+          shop_token:this.shop_token,
+          language:this.language,
           channel: 'socket',
           script: script,
           thread: thread
@@ -261,6 +273,8 @@
         this.deliverMessage({
           type: 'identify',
           user: this.guid,
+          shop_token:this.shop_token,
+          language:this.language,
           channel: 'socket',
           user_profile: user,
         });

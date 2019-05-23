@@ -23,6 +23,11 @@ var Botkit = require('botkit');
 
 
 
+//setup main message configuration
+let configuration=require('./config.js')();
+configuration.initialiseConfig();
+
+
 var rasa = require('botkit-rasa')
 ({rasa_uri: process.env.rasa_uri,
 model:process.env.rasa_model,
@@ -60,12 +65,24 @@ require(__dirname + '/components/plugin_identity.js')(controller);
 // Open the web socket server
 controller.openSocketServer(controller.httpserver);
 
-//implement context handling
-var contextmiddleware=require(__dirname+'/middleware/botkit-context-middleware.js')();
-controller.middleware.capture.use(contextmiddleware.capture)
 
+var configMiddleware=require(__dirname+'/middleware/config_middleware.js')();
+
+//Restrict access
+controller.middleware.ingest.use(configMiddleware.ingest);
+
+//inject configuration
+controller.middleware.normalize.use(configMiddleware.normalize);
+controller.middleware.heard.use(configMiddleware.heard);
+
+
+
+//Rasa
 controller.middleware.receive.use(rasa.receive);
 controller.changeEars(rasa.hears);
+
+
+
 
 
 // Start the bot brain in motion!!
