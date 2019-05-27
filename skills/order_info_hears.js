@@ -14,26 +14,26 @@ module.exports = function (controller) {
       // Authenticate
 
       //Ask for family name
-      convo.addQuestion("Geef de naam op die op het order vermeld staat.", [
+      convo.addQuestion({text:"Geef de naam op die op het order vermeld staat.",nlu:false}, [
         {
           default: true,
           callback: function (response, convo) {
-            convo.setVar("name", response.text);
+            convo.setVar("name", convo.extractResponse('name'));
             convo.next();
           },
         }
-      ], {}, 'authentication');
+      ], {key:"name"}, 'authentication');
 
       //Order number
-      convo.addQuestion("Wat is je ordernummer?", [
+      convo.addQuestion({text:"Wat is je ordernummer?",nlu:false}, [
         {
           default: true,
           callback: function (response, convo) {
-            convo.setVar("order", response.text);
+            convo.setVar("order", convo.extractResponse('ordernr'));
             convo.next();
           },
         }
-      ], {}, 'authentication');
+      ], {key:"ordernr"}, 'authentication');
       convo.addMessage({ text: "Bedankt, ik ga op zoek naar je order {{vars.order}} op naam van klant '{{vars.name}}'."}, "authentication");
       convo.addMessage({action:"authentication_response"},"authentication");
       convo.beforeThread("authentication_response", function (convo, next) {

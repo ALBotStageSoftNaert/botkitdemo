@@ -15,6 +15,7 @@
       guid: null,
       shop_token:'SN-Test-98510',
       language:null,
+      useNlu:true,
       current_user: null,
       on: function(event, handler) {
         this.message_window.addEventListener(event, function(evt) {
@@ -62,7 +63,7 @@
         if (!text) {
           return;
         }
-        let nlu=true;
+        let nlu=this.useNlu;
         if(text.text){
           nlu=text.nlu;
           text=text.text;
@@ -405,6 +406,12 @@
         });
 
         that.on('message', function(message) {
+          if(message.nlu===false){
+            that.useNlu=false;
+          }
+          else{
+            that.useNlu=true;
+          }
 
           that.renderMessage(message);
 

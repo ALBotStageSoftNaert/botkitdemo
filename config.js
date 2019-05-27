@@ -8,16 +8,6 @@ module.exports = function () {
     let expressionsConfig = {
         'SN-Test-98510': {
             answers: {
-                //tijdelijk om quickreplies snel te testen.
-                Get_Recipe: {
-                    handle: true,
-                    //messageflags for Get_Recipe
-                    messageflags: {},
-                    messages: {
-
-                    }
-
-                },
                 Put_Greeting: {
                     handle: true,
                     //messageflags for Put_Greeting
