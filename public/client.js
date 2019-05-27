@@ -56,17 +56,22 @@
         });
 
       },
-      send: function(text, e) {
+      send: function(text,e) {
 	var that = this;
         if (e) e.preventDefault();
         if (!text) {
           return;
         }
+        let nlu=true;
+        if(text.text){
+          nlu=text.nlu;
+          text=text.text;
+        }
         var message = {
           type: 'outgoing',
           text: text
         };
-
+        
         this.clearReplies();
         that.renderMessage(message);
 
@@ -75,6 +80,7 @@
           text: text,
           user: this.guid,
           shop_token:this.shop_token,
+          nlu:nlu,
           language:this.language,
           channel: this.options.use_sockets ? 'socket' : 'webhook'
         });
@@ -224,7 +230,8 @@
         this.replies.innerHTML = '';
       },
       quickReply: function(payload) {
-        this.send(payload);
+        let p={text:payload,nlu:false};        
+        this.send(p);
       },
       focus: function() {
         this.input.focus();

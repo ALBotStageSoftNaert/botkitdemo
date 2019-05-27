@@ -1,6 +1,7 @@
 const axios = require('axios');
 module.exports = function (controller) {
   controller.hears(['Get_Order_Status', 'Get_Delivery', 'Get_Order_Detail'], 'message_received', function (bot, message) {
+
     bot.createConversation(message, function (err, convo) {
       convo.setVar("authResponse", { text: "Er werd geen request gedaan, demo.", thread: message.intent.name });
       convo.setVar("initialQuestion", message);
@@ -142,6 +143,7 @@ module.exports = function (controller) {
       convo.addMessage({ text: "Ik kan je vertellen wat er in je bestelling zit, wanneer we je bestelling leveren en in welke status je bestelling zit.", action: "extra_question" }, "Help");
 
 
+      
 
 
 
@@ -180,6 +182,14 @@ module.exports = function (controller) {
           },
         },
         {
+          pattern: 'Get_Orders',          
+          callback: function (response, convo) {
+            convo.setVar("question",response);
+            convo.gotoThread('Get_Orders');
+            convo.next();
+          },
+        },
+        {
           pattern: 'Quit',
           callback: function (response, convo) {
             convo.addMessage("Blij dat ik je kon helpen met dit order.")
@@ -196,6 +206,26 @@ module.exports = function (controller) {
           },
         }
       ], {}, 'extra_question');
+
+
+      //Other order
+      convo.beforeThread("Get_Orders", function (convo, next) {
+        let noOrders=message.config.messages.noOrders;
+        let whichOrder=message.config.messages.whichOrder;
+        let orderInfo=message.config.messages.orderInfo;
+        noOrders=noOrders?noOrders:"U heeft enkel dit openstaand order bij ons. default";
+        whichOrder=whichOrder?whichOrder:"Over welk order wil u meer weten? •--orders--• default";
+        orderInfo=orderInfo?orderInfo:"Wat wil u graag weten over order •--order--• default";
+
+
+        //API request
+        
+
+        next();
+      });
+
+
+
 
       convo.on('end', function (convo) {
         if (convo.status == 'completed' || convo.status == 'stopped') {
