@@ -275,6 +275,7 @@ module.exports = function (controller) {
         default: true,
         callback: function (response, convo) {
             convo.setVar("orderKey",convo.extractResponse("chosen_order"))
+            //Todo: generaliseren
             convo.transitionTo('extra_question',"Je koos het order {{vars.orderKey}}");}}
           ],{key:"chosen_order"}, "Get_Orders_Which_Order");
       convo.addMessage({ text: "{{vars.ordersMessage}}" }, "Get_Orders_Order_Info");
