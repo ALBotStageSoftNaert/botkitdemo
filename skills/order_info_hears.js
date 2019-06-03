@@ -1,11 +1,12 @@
 const axios = require('axios');
 const template = require('../utils/templateParameters');
+const findMessages = require('../utils/findMessages');
 module.exports = function (controller) {
   controller.hears(['Get_Order_Status', 'Get_Delivery', 'Get_Order_Detail'], 'message_received', function (bot, message) {
 
     bot.createConversation(message, function (err, convo) {
-      convo.setVar("authResponse", { text: "Er werd geen request gedaan, demo.", thread: message.intent.name });
-      convo.setVar("initialQuestion", message);
+      convo.setVar("Order_Info_Messages", findMessages(message.shop_token, message.language, "conversation_orderInfo"));
+      convo.setVar("question", message);
       convo.setVar("name", "onbekend");
       convo.setVar("order", "onbekend");
 
@@ -13,7 +14,7 @@ module.exports = function (controller) {
       // Authenticate
 
       //Ask for family name
-      convo.addQuestion({ text: "Geef de naam op die op het order vermeld staat.", nlu: false }, [
+      convo.addQuestion({ text: "{{vars.Order_Info_Messages.name}}", nlu: false }, [
         {
           default: true,
           callback: function (response, convo) {
@@ -24,7 +25,7 @@ module.exports = function (controller) {
       ], { key: "name" }, 'authentication');
 
       //Order number
-      convo.addQuestion({ text: "Wat is je ordernummer?", nlu: false }, [
+      convo.addQuestion({ text: "{{vars.Order_Info_Messages.orderNr}}", nlu: false }, [
         {
           default: true,
           callback: function (response, convo) {
@@ -33,78 +34,65 @@ module.exports = function (controller) {
           },
         }
       ], { key: "ordernr" }, 'authentication');
-      convo.addMessage({ text: "Bedankt, ik ga op zoek naar je order {{vars.order}} op naam van klant '{{vars.name}}'." }, "authentication");
+      convo.addMessage({ text: "{{vars.Order_Info_Messages.startSearch}}" }, "authentication");
       convo.addMessage({ action: "authentication_response" }, "authentication");
       convo.beforeThread("authentication_response", function (convo, next) {
-        // var name = convo.extractResponse('name');
-        let config = convo.vars.initialQuestion.config;
-        let authResponse = convo.vars.authResponse;
-        if (config) {
-          let auth = axios.create({
-            baseURL: config.url
-          });
-          var request = {
-            method: 'get',
-            url: '/AccessSalesOrder/JSON/debug',
-            params: {
-              securityKey: config.securityKey,
-              salesNb: convo.vars.order,
-              lastname: convo.vars.name.toUpperCase(),
-              branch: "",
-              mailAddress: "",
-              postalCode: ""
-            }
+        let config = convo.vars.question.config;
+
+        let auth = axios.create({
+          baseURL: config.url
+        });
+        var request = {
+          method: 'get',
+          url: '/AccessSalesOrder/JSON/debug',
+          params: {
+            securityKey: config.securityKey,
+            salesNb: convo.vars.order,
+            lastname: convo.vars.name.toUpperCase(),
+            branch: "",
+            mailAddress: "",
+            postalCode: ""
+          }
+        }
+
+        auth(request).then(function (result) {
+          if (result.data && result.data !== "") {
+            convo.setVar("orderKey", result.data);
+
+            next();
+          }
+          else {
+            throw (new Error("Onjuiste credenties"));
           }
 
-          auth(request).then(function (result) {
-            if (result.data && result.data !== "") {
-              convo.setVar("orderKey", result.data);
+        }).catch(function (err) {
+          convo.setVar("orderKey", "");
+          convo.setVar('error', err);
+          convo.gotoThread("authentication_failed");
+          next(err);
+        });
 
-
-              authResponse.text = "Ik heb je bestelling gevonden.";
-              convo.setVar("authResponse", authResponse);
-              next();
-            }
-            else {
-              throw (new Error("Onjuiste credenties"));
-            }
-
-          }).catch(function (err) {
-            convo.setVar("orderKey", "");
-            convo.setVar('error', err);
-            authResponse.text = "Ik vond je bestelling niet, wil je nog eens controleren of je wel de juiste gegevens ingaf?";
-            convo.setVar("authResponse", authResponse);
-            convo.gotoThread("authentication_failed");
-            next(err);
-          });
-        }
-        else {
-
-          authResponse.text = "debuginfo: Authenticatie werd verwerkt in beforeThread";
-          convo.setVar("authResponse", authResponse);
-          next();
-        }
 
 
       });
 
-      convo.addMessage({ text: "{{vars.authResponse.text}}", action: convo.vars.authResponse.thread }, "authentication_response");
+      convo.addMessage({ text: "{{vars.Order_Info_Messages.authenticated}}", action: message.intent.name }, "authentication_response");
 
 
-      convo.addMessage({ text: "Ik vond je bestelling niet." }, "authentication_failed");
-      convo.addMessage({ text: "Kun je eens controleren of je de juiste gegevens ingaf, op deze afbeelding kan je zien waar je die informatie terugvindt.", image: message.config.images.order_sample }, "authentication_failed");
-      convo.addQuestion("Wil je nog eens proberen?", [
+      convo.addMessage({ text: "{{vars.Order_Info_Messages.notAuthenticated}}" }, "authentication_failed");
+      convo.addMessage({ text: "{{vars.Order_Info_Messages.checkAgain}}", image: message.config.images.order_sample }, "authentication_failed");
+      convo.addQuestion("{{vars.Order_Info_Messages.retryAuthQuestion}}", [
         {
           pattern: 'Yes',
           callback: function (response, convo) {
-            convo.transitionTo('authentication', 'We proberen het opnieuw!');
+            convo.transitionTo('authentication', '{{vars.Order_Info_Messages.retry}}');
             convo.next();
           },
         },
         {
           pattern: 'No',
           callback: function (response, convo) {
-            convo.addMessage('Geen probleem, vraag me gerust opnieuw naar informatie over je order.', "authentication_failed");
+            convo.addMessage('{{vars.Order_Info_Messages.cancel}}', "authentication_failed");
             convo.successful();
             convo.next();
           },
@@ -114,7 +102,7 @@ module.exports = function (controller) {
           callback: function (response, convo) {
 
 
-            convo.transitionRepeat('Ik begrijp niet wat je bedoelt met wat je zei, kun je nog eens proberen?');
+            convo.transitionRepeat('{{vars.Order_Info_Messages.undefined}}');
             convo.next();
 
           },
@@ -124,31 +112,147 @@ module.exports = function (controller) {
 
       //retrieve answers
       convo.beforeThread("Get_Order_Status", function (convo, next) {
-        next();
-      });
-      convo.beforeThread("Get_Delivery", function (convo, next) {
-        next();
-      });
-      convo.beforeThread("Get_Order_Detail", function (convo, next) {
-        next();
-      });
+        let q = convo.vars.question;
+        let messages = q.config.messages;
+        let status = axios.create({
+          baseURL: q.config.url
+        });
+        var request = {
+          method: 'get',
+          url: '/SalesOrder/JSON/debug',
+          params: {
+            securityKey: q.config.securityKey,
+            id: convo.vars.orderKey
+          }
+        }
 
+        status(request).then(function (result) {
+          if (result.data && result.data !== "") {
+            let order = result.data;
+            processStatus(order);
+
+            next();
+          }
+          else {
+            throw (new Error("Wrong response"));
+          }
+
+        }).catch(function (err) {
+          convo.setVar('error', err);
+          convo.setVar("message", template(messages.failed, {}));
+          convo.gotoThread("Failed_Order_Question");
+          next(err);
+        });
+      });
+      function processStatus(order) {
+        let q = convo.vars.question;
+        let messages = findMessages(q.shop_token, q.language, "Get_Order_Status");
+        switch (order.status.id) {
+          case 0:
+            convo.setVar("statusOrderMessage", template(messages.undefined, {}));
+            break;
+          case 10:
+            convo.setVar("statusOrderMessage", template(messages.processing, {}));
+            break;
+          case 20:
+            if (order.dateExpectedOnStock !== "") {
+              convo.setVar("statusOrderMessage", template(messages.orderedWithDate, { dateExpectedOnStock: order.dateExpectedOnStock }));
+            }
+            else {
+              convo.setVar("statusOrderMessage", template(messages.ordered, {}));
+            }
+            break;
+          case 30:
+            if (order.isDelivery) {
+              if (order.nextDeliveryDate === "") {
+                convo.setVar("statusOrderMessage", template(messages.stockedDelivery, {}));
+              }
+              else {
+                convo.setVar("statusOrderMessage", template(messages.stockedWithDeliveryDate, { deliveryDate: order.nextDeliveryDate }));
+              }
+            }
+            else {
+              convo.setVar("statusOrderMessage", template(messages.stockedPickup, {}));
+            }
+            break;
+          case 40:
+            convo.setVar("statusOrderMessage", template(messages.delivered, {}));
+            break;
+          case 70:
+            convo.setVar("statusOrderMessage", template(messages.retour, {}));
+            break;
+          case 80:
+            convo.setVar("statusOrderMessage", template(messages.returned, {}));
+            break;
+          case 90:
+            convo.setVar("statusOrderMessage", template(messages.canceled, {}));
+            break;
+        }
+      }
+      convo.beforeThread("Get_Delivery", function (convo, next) {
+        let q = convo.vars.question;
+        let messages = q.config.messages;
+        let getOrder = axios.create({
+          baseURL: q.config.url
+        });
+        var request = {
+          method: 'get',
+          url: '/SalesOrder/JSON/debug',
+          params: {
+            securityKey: q.config.securityKey,
+            id: convo.vars.orderKey
+          }
+        }
+
+        getOrder(request).then(function (result) {
+          if (result.data && result.data !== "") {
+            let order = result.data;
+            processStatus(order);
+            if (order.isDelivery) {
+              //TODO: change to isFinished when api updates
+              if (order.isCompleted) {
+                convo.setVar("deliveryOrderMessage", template(messages.deliveryCompleted, {}));
+              }
+              else {
+                if (order.nextDeliveryDate !== "") {
+                  convo.setVar("deliveryOrderMessage", template(messages.deliveryDate, { deliveryDate: order.nextDeliveryDate }));
+                }
+                else {
+                  convo.setVar("deliveryOrderMessage", template(messages.noDeliveryDate, { status: "{{vars.statusOrderMessage}}" }));
+                }
+              }
+            }
+            else {
+              convo.setVar("deliveryOrderMessage", template(messages.noDelivery, {}));
+            }
+            next();
+          }
+          else {
+            throw (new Error("Wrong response"));
+          }
+
+        }).catch(function (err) {
+          convo.setVar('error', err);
+          convo.setVar("message", template(messages.failed, {}));
+          convo.gotoThread("Failed_Order_Question");
+          next(err);
+        });
+      });
 
 
 
       //answers
-      convo.addMessage({ text: "Je order wordt momenteel verwerkt in het magazijn.", action: "extra_question" }, "Get_Order_Status");
-      convo.addMessage({ text: "Je order wordt momenteel verwerkt in het magazijn, er is nog geen leveringsdatum beschikbaar.", action: "extra_question" }, "Get_Delivery");
-      convo.addMessage({ text: "Je order bevatte een stoel en een kast.", action: "extra_question" }, "Get_Order_Detail");
-      convo.addMessage({ text: "Ik kan je vertellen wat er in je bestelling zit, wanneer we je bestelling leveren en in welke status je bestelling zit.", action: "extra_question" }, "Help");
-
+      convo.addMessage({ text: "{{vars.statusOrderMessage}}", action: "extra_question" }, "Get_Order_Status");
+      convo.addMessage({ text: "{{vars.deliveryOrderMessage}}", action: "extra_question" }, "Get_Delivery");
+      convo.addMessage({ text: "{{vars.orderHelp}}", action: "extra_question" }, "Help");
+      convo.addMessage({ text: "{{vars.message}}", action: "extra_question" }, "Failed_Order_Question");
 
 
 
 
 
       //Extra question
-      convo.addQuestion("Wat wil je nog weten over je order?", [
+      convo.addQuestion("{{vars.Order_Info_Messages.extraQuestion}}", [
         {
           pattern: 'Get_Order_Status',
           callback: function (response, convo) {
@@ -164,19 +268,12 @@ module.exports = function (controller) {
             convo.gotoThread('Get_Delivery');
             convo.next();
           },
-        },
-        {
-          pattern: 'Get_Order_Detail',
-          callback: function (response, convo) {
-            convo.setVar("question", response);
-            convo.gotoThread('Get_Order_Detail');
-            convo.next();
-          },
-        },
+        },        
         {
           pattern: 'Get_Help',
           callback: function (response, convo) {
             convo.setVar("question", response);
+            convo.setVar("orderHelp", template(response.config.messages.orderHelp, {}));
             convo.gotoThread('Help');
             convo.next();
           },
@@ -192,7 +289,7 @@ module.exports = function (controller) {
         {
           pattern: 'Quit',
           callback: function (response, convo) {
-            convo.addMessage("Blij dat ik je kon helpen met dit order.")
+            convo.addMessage("{{vars.orderQuit}}")
             convo.successful();
             convo.next()
           },
@@ -200,34 +297,32 @@ module.exports = function (controller) {
         {
           default: true,
           callback: function (response, convo) {
-            convo.transitionRepeat('Ik begrijp niet wat je bedoelt met "' + response.text + '" , kun je nog eens proberen?');
+            convo.transitionRepeat(template(convo.vars.Order_Info_Messages.retryExtraQuestion,{text:response.text}));
             convo.next();
 
           },
         }
-      ], {}, 'extra_question');
+      ], { key: "extra_question_response" }, 'extra_question');
 
 
       //Other order
       convo.beforeThread("Get_Orders", function (convo, next) {
-        let noOrders = message.config.messages.noOrders;
-        let whichOrder = message.config.messages.whichOrder;
-        let orderInfo = message.config.messages.orderInfo;
-        let orderFailed = "Er liep iets mis terwijl we jouw orders zochten.";
-        noOrders = noOrders ? noOrders : "U heeft enkel dit openstaand order bij ons. default";
-        whichOrder = whichOrder ? whichOrder : "Over welk order wil u meer weten? default";
-        orderInfo = orderInfo ? orderInfo : "Wat wil u graag weten over order •--order--• default";
+        let msg = convo.vars.question;
+        let noOrders = msg.config.messages.noOrders;
+        let whichOrder = msg.config.messages.whichOrder;
+        let orderFailed = msg.config.messages.orderFailed;
+
 
 
         //API request
         let orders = axios.create({
-          baseURL: message.config.url
+          baseURL: msg.config.url
         });
         var request = {
           method: 'get',
           url: '/MyOpenSaleOrders/JSON/debug',
           params: {
-            securityKey: message.config.securityKey,
+            securityKey: msg.config.securityKey,
             orderId: convo.vars.orderKey
           }
         };
@@ -238,18 +333,13 @@ module.exports = function (controller) {
           if (result.data && result.data !== "" && result.data.length) {
             let orders = result.data;
             convo.setVar("orders", orders);
-
-            if (orders.length === 1) {
-              convo.setVar("ordersMessage", template(orderInfo,{order: orders[0]}));
-              convo.gotoThread('Get_Orders_Order_Info');
-              next(new Error("Change Thread"))            }
             if (orders.length > 1) {
-              convo.setVar("ordersMessage", template(whichOrder, { orders: "{{vars.orders}}"}));
-              convo.setVar("orders", orders.map(s=>{return {title:s.Number,payload:s.id}}));
+              convo.setVar("ordersMessage", template(whichOrder, {}));
+              convo.setVar("orders", orders.map(s => { return { title: s.Number, payload: s.id } }));
               convo.gotoThread('Get_Orders_Which_Order');
               next(new Error("Change Thread"));
             }
-            if (orders.length === 0) {
+            if (orders.length <= 1) {
               convo.setVar("ordersMessage", noOrders);
               convo.gotoThread('Get_Orders_No_Orders');
               next(new Error("Change Thread"));
@@ -263,22 +353,24 @@ module.exports = function (controller) {
         }).catch(function (err) {
           convo.setVar("orders", []);
           convo.setVar('error', err);
-          convo.setVar("orderMessage", orderFailed);
-          convo.gotoThread("Get_Orders_Failed");
+          convo.setVar("message", orderFailed);
+          convo.gotoThread("Failed_Order_Question");
           next(err);
         });
       });
 
-      convo.addMessage({ text: "{{vars.ordersMessage}}" }, "Get_Orders_Failed");
-      convo.addMessage({ text: "{{vars.ordersMessage}}" }, "Get_Orders_No_Orders");
-      convo.addQuestion({ text: "{{vars.ordersMessage}}",quick_replies:"{{vars.orders}}"},[{
+
+      convo.addMessage({ text: "{{vars.ordersMessage}}", action: "extra_question" }, "Get_Orders_No_Orders");
+      convo.addQuestion({ text: "{{vars.ordersMessage}}", quick_replies: "{{vars.orders}}" }, [{
         default: true,
         callback: function (response, convo) {
-            convo.setVar("orderKey",convo.extractResponse("chosen_order"))
-            //Todo: generaliseren
-            convo.transitionTo('extra_question',"Je koos het order {{vars.orderKey}}");}}
-          ],{key:"chosen_order"}, "Get_Orders_Which_Order");
-      convo.addMessage({ text: "{{vars.ordersMessage}}" }, "Get_Orders_Order_Info");
+          convo.setVar("orderKey", convo.extractResponse("chosen_order"))
+          //Todo: generaliseren
+          convo.transitionTo('extra_question', template(convo.vars.Order_Info_Messages.chosenOrder,{key:"{{vars.orderKey}}"}));
+        }
+      }
+      ], { key: "chosen_order" }, "Get_Orders_Which_Order");
+      convo.addMessage({ text: "{{vars.ordersMessage}}", action: "extra_question" }, "Get_Orders_Order_Info");
 
 
       convo.on('end', function (convo) {
@@ -288,8 +380,8 @@ module.exports = function (controller) {
 
 
       //default
-      convo.addMessage("Ik geef je graag informatie over je order!");
-      convo.addMessage({ text: "Hiervoor heb ik wel meer informatie nodig.", action: "authentication" });
+      convo.addMessage("{{vars.Order_Info_Messages.greeting}}");
+      convo.addMessage({ text: "{{vars.Order_Info_Messages.transitionAuthentication}}", action: "authentication" });
 
       convo.activate();
     });

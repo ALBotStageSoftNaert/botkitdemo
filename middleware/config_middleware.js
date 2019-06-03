@@ -1,3 +1,4 @@
+const findMessages = require('../utils/findMessages');
 module.exports = function (config) {
 
     var middleware = {};
@@ -5,6 +6,9 @@ module.exports = function (config) {
     middleware.normalize = function (bot, message, next) {
         const shopConfig = JSON.parse(process.env.shopConfig);
         const expressionsConfig = JSON.parse(process.env.expressionsConfig);
+        const standardExpressions = JSON.parse(process.env.standardExpressions);
+        //Language is fixed atm
+        message.language = "NL";
         if (message.shop_token && shopConfig[message.shop_token] && expressionsConfig[message.shop_token]) {
             let sc = shopConfig[message.shop_token];
             let config = {
@@ -15,9 +19,7 @@ module.exports = function (config) {
                 images: sc.images,
                 messages: {},
             }
-            let ec = expressionsConfig[message.shop_token];
-            config.messages = ec.utterances;
-
+            config.messages=findMessages(message.shop_token,message.language);
             message.config = config;
             next();
         }
@@ -25,14 +27,15 @@ module.exports = function (config) {
     middleware.heard = function (bot, message, next) {
         const shopConfig = JSON.parse(process.env.shopConfig);
         const expressionsConfig = JSON.parse(process.env.expressionsConfig);
-        let ec = expressionsConfig[message.shop_token].answers[message.intent.name];
-        if(ec && ec.messages){
-            message.config.messages=ec.messages;
-        }
+        const standardExpressions = JSON.parse(process.env.standardExpressions);
+
+        message.config.messages = findMessages(message.shop_token,message.language,message.intent.name);
 
 
         next();
     };
+
+
 
     middleware.ingest = function (bot, message, res, next) {
         const shopConfig = JSON.parse(process.env.shopConfig);
@@ -40,9 +43,9 @@ module.exports = function (config) {
         if (message.shop_token && shopConfig[message.shop_token] && expressionsConfig[message.shop_token]) {
             next();
         }
-        else{
-            res.status="401";            
-            res.send(JSON.stringify({"text":"U heeft geen toegang.","channel":"socket","user":message.user,"to":message.user,"type":"message"}));
+        else {
+            res.status = "401";
+            res.send(JSON.stringify({ "text": "U heeft geen toegang.", "channel": "socket", "user": message.user, "to": message.user, "type": "message" }));
         }
 
 

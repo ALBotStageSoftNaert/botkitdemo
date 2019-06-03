@@ -3,8 +3,8 @@ module.exports = function (controller) {
 
     controller.hears(['Get_Openinghours'], 'message_received', function (bot, message) {
 
-        let failed = message.config.messages.failed ? message.config.messages.failed : "Ik kon de openingsuren niet ophalen...";
-        let unknown = message.config.messages.unknown ? message.config.messages.unknwon : "Ik ken de openingsuren van deze winkel niet.";
+        let failed = message.config.messages.failed;
+        let unknown = message.config.messages.unknown;
 
         let config = message.config;
 
@@ -15,7 +15,7 @@ module.exports = function (controller) {
             method: 'get',
             url: '/OpeningHours/JSON/debug',
             params: {
-                //securityKey: config.securityKey,
+                securityKey: config.securityKey,
             }
         }
 
