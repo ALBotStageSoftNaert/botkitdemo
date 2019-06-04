@@ -1,6 +1,7 @@
 const axios = require('axios');
 const template = require('../utils/templateParameters');
 const findMessages = require('../utils/findMessages');
+const moment = require('moment');
 module.exports = function (controller) {
   controller.hears(['Get_Order_Status', 'Get_Delivery', 'Get_Order_Detail'], 'message_received', function (bot, message) {
 
@@ -129,9 +130,9 @@ module.exports = function (controller) {
         status(request).then(function (result) {
           if (result.data && result.data !== "") {
             let order = result.data;
-            processStatus(order);
-
-            next();
+            processStatus(order).then(function () {
+              next();
+            });
           }
           else {
             throw (new Error("Wrong response"));
@@ -144,7 +145,7 @@ module.exports = function (controller) {
           next(err);
         });
       });
-      function processStatus(order) {
+      async function processStatus(order) {
         let q = convo.vars.question;
         let messages = findMessages(q.shop_token, q.language, "Get_Order_Status");
         switch (order.status.id) {
@@ -164,11 +165,16 @@ module.exports = function (controller) {
             break;
           case 30:
             if (order.isDelivery) {
-              if (order.nextDeliveryDate === "") {
+              if (order.nextDelivery === "") {
                 convo.setVar("statusOrderMessage", template(messages.stockedDelivery, {}));
               }
               else {
-                convo.setVar("statusOrderMessage", template(messages.stockedWithDeliveryDate, { deliveryDate: order.nextDeliveryDate }));
+                await ajaxDelivery(order.nextDelivery).then(function (delivery) {
+                  let date = moment(delivery.Date).format("DD/MM/YYYY");
+                  convo.setVar("statusOrderMessage", template(messages.stockedWithDeliveryDate, { deliveryDate: date }));
+                }).catch(function (err) {
+                  convo.setVar("statusOrderMessage", template(messages.stockedDelivery, {}));
+                })
               }
             }
             else {
@@ -189,9 +195,42 @@ module.exports = function (controller) {
             break;
         }
       }
+
+      function ajaxDelivery(deliveryId) {
+        return new Promise(function (resolve, reject) {
+          let q = convo.vars.question;
+          let getDelivery = axios.create({
+            baseURL: q.config.url
+          });
+          var request = {
+            method: 'get',
+            url: '/Deliveries/JSON/debug',
+            params: {
+              securityKey: q.config.securityKey,
+              id: deliveryId
+            }
+          }
+
+          getDelivery(request).then(function (result) {
+            if (result.data && result.data !== "") {
+              resolve(result.data);
+            }
+            else {
+              throw (new Error("Wrong response"));
+            }
+
+          }).catch(function (err) {
+            reject(err.message);
+          });
+
+
+        })
+
+      }
       convo.beforeThread("Get_Delivery", function (convo, next) {
         let q = convo.vars.question;
         let messages = q.config.messages;
+        let options = q.config.options;
         let getOrder = axios.create({
           baseURL: q.config.url
         });
@@ -207,25 +246,64 @@ module.exports = function (controller) {
         getOrder(request).then(function (result) {
           if (result.data && result.data !== "") {
             let order = result.data;
-            processStatus(order);
+
             if (order.isDelivery) {
-              //TODO: change to isFinished when api updates
-              if (order.isCompleted) {
+              if (order.isFinished) {
                 convo.setVar("deliveryOrderMessage", template(messages.deliveryCompleted, {}));
+                next();
               }
               else {
-                if (order.nextDeliveryDate !== "") {
-                  convo.setVar("deliveryOrderMessage", template(messages.deliveryDate, { deliveryDate: order.nextDeliveryDate }));
+                if (order.nextDelivery !== "") {
+                  ajaxDelivery(order.nextDelivery).then(function (r) {
+                    let date = moment(r.Date).format("DD/MM/YYYY");
+                    if (r.approved) {
+                      if (options.timeslot===undefined || options.timeslot) {
+                        if(r.arrivalTimeLatest && r.arrivalTimeEarliest){
+                        let ae = moment(r.arrivalTimeEarliest).format("HH:mm");
+                        let al = moment(r.arrivalTimeLatest).format("HH:mm");
+                        convo.setVar("deliveryOrderMessage", template(messages.deliveryDateTimespan, { deliveryDate: date, startTime: ae, endTime: al }));
+                        }
+                        else{
+                          convo.setVar("deliveryOrderMessage", template(messages.deliveryDate, { deliveryDate: date }));
+                        }
+                      }
+                      else{
+                        if(r.arrivalTime){
+                        let time = moment(r.arrivalTime).format("HH:mm");
+                        convo.setVar("deliveryOrderMessage", template(messages.deliveryDateTime, { deliveryDate: date, time: time}));
+
+                      }
+                      else{
+                        convo.setVar("deliveryOrderMessage", template(messages.deliveryDate, { deliveryDate: date }));
+                      }
+                    }
+       
+
+                    }
+                    else {
+                      convo.setVar("deliveryOrderMessage", template(messages.deliveryDate, { deliveryDate: date }));
+                    }
+                    next();
+                  })
+                    .catch(function (err) {
+                      convo.setVar("deliveryOrderMessage", template(messages.noDeliveryDate, {}));
+                      next();
+                    })
+
+
                 }
                 else {
+                  processStatus(order);
                   convo.setVar("deliveryOrderMessage", template(messages.noDeliveryDate, { status: "{{vars.statusOrderMessage}}" }));
+                  next();
                 }
               }
             }
             else {
               convo.setVar("deliveryOrderMessage", template(messages.noDelivery, {}));
+              next();
             }
-            next();
+
           }
           else {
             throw (new Error("Wrong response"));
@@ -268,7 +346,7 @@ module.exports = function (controller) {
             convo.gotoThread('Get_Delivery');
             convo.next();
           },
-        },        
+        },
         {
           pattern: 'Get_Help',
           callback: function (response, convo) {
@@ -297,7 +375,7 @@ module.exports = function (controller) {
         {
           default: true,
           callback: function (response, convo) {
-            convo.transitionRepeat(template(convo.vars.Order_Info_Messages.retryExtraQuestion,{text:response.text}));
+            convo.transitionRepeat(template(convo.vars.Order_Info_Messages.retryExtraQuestion, { text: response.text }));
             convo.next();
 
           },
@@ -320,7 +398,7 @@ module.exports = function (controller) {
         });
         var request = {
           method: 'get',
-          url: '/MyOpenSaleOrders/JSON/debug',
+          url: '/MyOpenSalesOrders/JSON/debug',
           params: {
             securityKey: msg.config.securityKey,
             orderId: convo.vars.orderKey
@@ -366,7 +444,7 @@ module.exports = function (controller) {
         callback: function (response, convo) {
           convo.setVar("orderKey", convo.extractResponse("chosen_order"))
           //Todo: generaliseren
-          convo.transitionTo('extra_question', template(convo.vars.Order_Info_Messages.chosenOrder,{key:"{{vars.orderKey}}"}));
+          convo.transitionTo('extra_question', template(convo.vars.Order_Info_Messages.chosenOrder, { key: "{{vars.orderKey}}" }));
         }
       }
       ], { key: "chosen_order" }, "Get_Orders_Which_Order");

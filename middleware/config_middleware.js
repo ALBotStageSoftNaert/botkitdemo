@@ -30,7 +30,13 @@ module.exports = function (config) {
         const standardExpressions = JSON.parse(process.env.standardExpressions);
 
         message.config.messages = findMessages(message.shop_token,message.language,message.intent.name);
+        
+        //inject options for message.
+        message.config.options=expressionsConfig[message.shop_token][message.language].answers[message.intent.name].messageOptions;
 
+        if(!message.config.options){
+            message.config.options={};
+        }
 
         next();
     };
