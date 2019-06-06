@@ -78,7 +78,7 @@ module.exports = function () {
                     },
                 },
                 utterances: {
-                    greeting: "Welkom bij Soft-Naert ontwikkelomgeving, ik beantwoord graag je vragen.",
+                    greeting: "Welkom bij Soft-Naert ontwikkelomgeving, ik beantwoord graag uw vragen.",
 
                 }
             }
@@ -139,8 +139,8 @@ module.exports = function () {
 
                 },
                 Get_Help: {
-                    standardHelp: 'Ik kan je helpen door info te geven over de winkel maar ook met vragen over je bestelling. Verder kan ik je jammer genoeg niet helpen.',
-                    orderHelp: "Ik kan je vertellen wat er in je bestelling zit, wanneer we je bestelling leveren en in welke status je bestelling zit.",
+                    standardHelp: 'Ik kan u de openingsuren van de winkel geven en ik kan u helpen met vragen over uw order. Verder kan ik u jammer genoeg niet helpen.',
+                    orderHelp: "Ik kan u vertellen wanneer we uw order leveren en in welke status uw order zit. Verder kan ik ook uw andere openstaande orders tonen.",
 
                 },
                 Get_Delivery: {
@@ -160,7 +160,7 @@ module.exports = function () {
             },
             utterances: {
                 greeting: "Welkom, ik beantwoord graag al uw vragen.",
-                standardUnidentified: "Ik begrijp niet wat je wil dat ik doe. Ik kan je helpen door info te geven over de winkel maar ook met vragen over je bestelling. Verder kan ik je jammer genoeg niet helpen.",
+                standardUnidentified: "Ik begrijp niet wat u wil dat ik doe. Ik kan u de openingsuren van de winkel geven en ik kan u helpen met vragen over uw order. Verder kan ik u jammer genoeg niet helpen.",
             }
         }
     }

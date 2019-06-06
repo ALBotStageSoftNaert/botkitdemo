@@ -7,6 +7,7 @@ module.exports = function (config) {
         const shopConfig = JSON.parse(process.env.shopConfig);
         const expressionsConfig = JSON.parse(process.env.expressionsConfig);
         const standardExpressions = JSON.parse(process.env.standardExpressions);
+        //TODO: Transform incoming language to 'NL', 'FR',...
         //Language is fixed atm
         message.language = "NL";
         if (message.shop_token && shopConfig[message.shop_token] && expressionsConfig[message.shop_token]) {
@@ -51,7 +52,7 @@ module.exports = function (config) {
         }
         else {
             res.status = "401";
-            res.send(JSON.stringify({ "text": "U heeft geen toegang.", "channel": "socket", "user": message.user, "to": message.user, "type": "message" }));
+            res.send(JSON.stringify({ "text": "Access denied", "channel": "socket", "user": message.user, "to": message.user, "type": "message" }));
         }
 
 

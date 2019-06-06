@@ -102,7 +102,8 @@ module.exports = function (controller) {
           default: true,
           callback: function (response, convo) {
 
-
+            //convo.sayFirst('{{vars.Order_Info_Messages.undefined}}');
+           // convo.repeat();
             convo.transitionRepeat('{{vars.Order_Info_Messages.undefined}}');
             convo.next();
 
@@ -367,7 +368,7 @@ module.exports = function (controller) {
         {
           pattern: 'Quit',
           callback: function (response, convo) {
-            convo.addMessage("{{vars.orderQuit}}")
+            convo.addMessage(response.config.messages.orderQuit);
             convo.successful();
             convo.next()
           },
@@ -375,7 +376,9 @@ module.exports = function (controller) {
         {
           default: true,
           callback: function (response, convo) {
-            convo.transitionRepeat(template(convo.vars.Order_Info_Messages.retryExtraQuestion, { text: response.text }));
+            response=convo.extractResponse("extra_question_response");
+            let msg=template(convo.vars.Order_Info_Messages.retryExtraQuestion, { text: response });
+            convo.transitionRepeat(msg);
             convo.next();
 
           },
